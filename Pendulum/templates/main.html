@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Pendulum - DEMO</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <!--  Fonts and icons  -->
+    <!--     Fonts and icons -->
+    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Roboto+Slab:400,700|Material+Icons" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/latest/css/font-awesome.min.css">
+
+    <!-- Material Kit CSS -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='materialize.min.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='my_style.css') }}">
+    <script type="text/javascript" src="{{ url_for('static', filename='socketio.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='jquery.min.js') }}"></script>
+</head>
+
+<body>
+    <script type="text/javascript" charset="utf-8">
+        let socket = io.connect('http://' + document.domain + ':' + location.port);        
+        let len = 1;
+    </script>
+
+    <nav>
+        <div class="nav-wrapper blue-grey darken-3">
+            <a href="#" class="brand-logo center">Математический маятник</a>
+        </div>
+    </nav>
+
+    <div class="exptable">
+        <div class="panel">
+            <div class="entry_field">
+                <div class="input-field">
+                    <input id="p_length" type="text" class="validate">
+                    <label for="p_length">Длина маятника (см)</label>
+                </div>
+                <button class="waves-effect waves-light btn-small" onclick="enter_length_val()">Ввести</button>
+            </div>
+            <h6>Теоретическое значение периода (сек):</h6>
+            <h5 id="period_theoretical"></h5>
+            <div class="ctrl_buttons">
+                <a class="waves-effect waves-light btn" id="start_btn">Начать запись</a>
+                <a class="waves-effect waves-light btn disabled" id="stop_btn">Остановить</a>
+            </div>
+            <table class="centered highlight" id="data-table">
+                <thead>
+                    <tr>
+                        <th>Длина маятника (см)</th>
+                        <th>Период (сек)</th>
+                        <th>Амплитуда (px)</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                </tbody>
+            </table>
+        </div>
+        <div class="plotarea">
+            <img src="{{ url_for('video_feed') }}" alt="Video Feed">
+        </div>
+    </div>
+
+    <script type="text/javascript" src="static/jquery.min.js"></script>
+    <script type="text/javascript" src="static/materialize.min.js"></script>
+
+    <script type="text/javascript">        
+        function enter_length_val() {
+            let l = document.getElementById("p_length").value;
+            len = l;
+            document.getElementById("period_theoretical").innerHTML = (6.283185307 * Math.sqrt(l / 981)).toFixed(2);
+            socket.emit('pen_length', l);
+        }
+
+        document.getElementById("start_btn").addEventListener("click", function () {
+            console.log("Start btn clicked!");
+            socket.emit("start_exp");
+            document.getElementById("stop_btn").classList.remove("disabled");
+            document.getElementById("start_btn").classList.add("disabled");
+        });
+
+        document.getElementById("stop_btn").addEventListener("click", function () {
+            socket.emit("stop_exp");
+            document.getElementById("stop_btn").classList.add("disabled");
+            document.getElementById("start_btn").classList.remove("disabled");
+        });
+
+        socket.on('data_emit', function (data) {            
+        });
+
+        function sine_func(x, A0, A1, A2, A3) {
+            return (A0 + A1 * Math.sin(A2 * x + A3));
+        };
+
+        socket.on('fit_data', function (data) {
+            
+        });
+
+        socket.on('exp_values', function (data) {
+            let table = document.getElementById("data-table");
+
+            let row = "<tr><td>" + len + "</td><td>" + data[0].toFixed(2) + // (6.283185307 / data[0]).toFixed(2)
+                "</td><td>" + data[1].toFixed(2) + "</td></tr>";
+            $(table).find('tbody').append(row);
+
+        });
+    </script>
+
+</body>
+
+</html>

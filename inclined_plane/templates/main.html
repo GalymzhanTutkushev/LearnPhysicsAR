@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Kolbeu - DEMO</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <!-- Material Kit CSS -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='materialize.min.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='examples.css') }}">
+    <script type="text/javascript" src="{{ url_for('static', filename='socketio.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='jquery.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='jquery.flot.js') }}"></script>
+</head>
+
+<body>
+    <script>
+        let socket = io.connect('http://' + document.domain + ':' + location.port);
+		let exp_num = 1;		
+		let sparce_data = [];
+        let fit_data = [];
+    </script>
+    <nav>
+        <div class="nav-wrapper blue-grey darken-3">
+            <a href="#" class="brand-logo center">Движение по наклонной плоскости</a>
+        </div>
+    </nav>
+    <div class="container">
+        <div class="row">
+            <div class="col l4">
+                <div class="card">
+                    <div class="card-content">
+                        <h3 class="header center-align">Начальные данные</h3>
+                        <div class="row">
+                            <div class="input-field col l6">
+                                <select>
+                                    <option value="1">10</option>
+                                    <option value="2">20</option>
+                                    <option value="3">30</option>
+                                    <option value="3">40</option>
+                                    <option value="3">50</option>
+                                    <option value="3">60</option>
+                                    <option value="3">70</option>
+                                </select>
+                                <label>Угол наклона</label>
+                            </div>
+                            <div class="input-field col l6">
+                                <select>
+                                    <option value="1">0.01с</option>
+                                    <option value="2">0.1с</option>
+                                    <option value="3">1с</option>
+                                </select>
+                                <label>Шаг по времени</label>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="card-action">
+                        <a class="waves-effect waves-danger btn" id="start_btn">Пуск</a>
+						<a class="waves-effect waves-light btn" id="new_exp_btn">Перезапуск</a>
+                    </div>
+                </div>
+
+                <div class="card" style="height: 400px;">
+                    <div class="card-content">
+                        <table class="centered highlight" style="display: block; height:300px; overflow-y: scroll;" id="data-table">
+                            <thead>
+                                <tr>
+                                    <th>№</th>
+                                    <th>Ускорение (м/c2)</th>
+                                    <th>Коэфф. трения</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="demo-container col l7">
+                <div id="placeholder" class="demo-placeholder">
+                    <div class="preloader-wrapper big active" id="preloader" style="display:none; position: relative; left: 45%; top: 45%;">
+                        <div class="spinner-layer spinner-blue-only">
+                            <div class="circle-clipper left">
+                                <div class="circle"></div>
+                            </div>
+                            <div class="gap-patch">
+                                <div class="circle"></div>
+                            </div>
+                            <div class="circle-clipper right">
+                                <div class="circle"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+			<div class="results-container col l7">
+				<h5 class="header">Среднее ускорение: <b><span  id="avg-accel"></span></b></h5>
+				<h5 class="header">Коэффициент трения: <b><span id="avg-frict"></span></b></h5>
+			</div>
+        </div>
+    </div>
+    <script type="text/javascript" src="../static/materialize.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('select').formSelect();
+        });
+
+		document.getElementById("new_exp_btn").addEventListener("click", function() {
+			socket.emit('restart');
+			$('#placeholder').empty();
+		});
+
+        document.getElementById("start_btn").addEventListener("click", function() {
+            socket.emit('start');
+            //document.getElementById("preloader").style.display = "inline-block";
+            sparce_data = [];
+            fit_data = [];
+		});
+			
+		socket.on('data_delivery_event', function(data) {
+				for (i = 0; i < data.length; i += 1) {
+					sparce_val = [data[i][0], data[i][1]];
+					sparce_data.push(sparce_val);
+				};
+			});
+			socket.on('fit_delivery_event', function(data) {
+				for (i = 0; i < data.length; i += 1) {
+                    fit_val = [data[i][0], data[i][1]];
+                    fit_data.push(fit_val);
+				};
+            });				
+			socket.on('plot_event', function(exp_data) {
+				//document.getElementById("preloader").style.display = "none"; 
+				    $.plot("#placeholder", [{
+                    data: fit_data,
+                    lines: {
+                        show: true
+                    },
+                    points: {
+                        show: false
+                    },
+                    color: "#0f0"
+                }, {
+                    data: sparce_data,
+                    lines: {
+                        show: false
+                    },
+                    points: {
+                        show: true
+                    },
+                    color: "#f00"
+                }]);
+
+                let table = document.getElementById("data-table");
+                let row = "<tr><td>" + exp_num + "</td><td>" + exp_data[0].toFixed(2) + "</td><td>" + exp_data[1].toFixed(2) + "</td></tr>";
+                $(table).find('tbody').append(row);
+				let avg_acc_text = exp_data[2].toFixed(2) + "&plusmn" + exp_data[4].toFixed(2) + "м/с2";
+				let avg_frc_text = exp_data[3].toFixed(2) + "&plusmn" + exp_data[5].toFixed(2);
+				document.getElementById("avg-accel").innerHTML = avg_acc_text;
+				document.getElementById("avg-frict").innerHTML = avg_frc_text;
+				exp_num += 1;
+
+            });
+       
+    </script>
+</body>
+
+</html>

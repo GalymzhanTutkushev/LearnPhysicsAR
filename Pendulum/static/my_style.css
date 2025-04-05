@@ -1,0 +1,61 @@
+html,
+body {
+    /* Make the body to be as tall as browser window */
+    height: 100vh;    
+    background: #FFF;
+    margin: 0;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+    font-family: Roboto;
+}
+
+img {
+    margin-bottom: 20px;
+}
+
+.exptable {
+    width: 100vw;
+    height: calc(100vh - 64px);
+    display: flex;
+}
+
+.panel {
+    flex-direction: column;
+    background-color: #F1F1F1;
+    height: calc(100vh - 64px);
+    padding: 20px;
+    justify-content: flex-start;
+    box-shadow: 3px 0px 2px #ccc;
+}
+
+.ctrl_button {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 20px;
+}
+
+.entry_field {
+    display: flex;
+    justify-content: space-around;
+}
+
+.plotarea {
+    height: calc(100vh - 64px);
+    flex-direction: column;
+    padding: 20px;    
+}
+
+img {
+    box-shadow: -3px -3px 3px 0px #ccc;
+}
+
+canvas {
+    border: 1px solid black;
+    position: absolute;
+}

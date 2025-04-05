@@ -1,0 +1,211 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Pendulum - DEMO</title>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <!--  Fonts and icons  -->
+    <!--     Fonts and icons -->    
+    <link rel="stylesheet" type="text/css" href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700|Roboto+Slab:400,700|Material+Icons" />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/font-awesome/latest/css/font-awesome.min.css">
+    
+    <!-- Material Kit CSS -->
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='materialize.min.css') }}">
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='my_style.css') }}">
+    <script type="text/javascript" src="{{ url_for('static', filename='socketio.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='jquery.min.js') }}"></script>
+    <script type="text/javascript" src="{{ url_for('static', filename='charts.js') }}"></script>
+</head>
+
+<body>
+    <script type="text/javascript" charset="utf-8">
+        let socket = io.connect('http://' + document.domain + ':' + location.port);
+    </script>
+    
+    <nav>
+        <div class="nav-wrapper blue-grey darken-3">
+            <a href="#" class="brand-logo center">Математический маятник</a>
+        </div>
+    </nav>
+
+    <div class="exptable">
+        <div class="panel">
+            <div class="entry_field">
+                <div class="input-field">
+                    <input id="p_length" type="text" class="validate">
+                    <label for="p_length">Длина маятника (см)</label>
+                </div>
+                <button class="waves-effect waves-light btn-small" onclick="enter_length_val()">Ввести</button>
+            </div>
+            <h6>Теоретическое значение периода (сек):</h6>
+            <h5 id="period_theoretical"></h5>
+            <img src="{{ url_for('video_feed') }}" alt="Video Feed">
+            <div class="ctrl_buttons">
+                <a class="waves-effect waves-light btn" id="start_btn">Начать запись</a>
+                <a class="waves-effect waves-light btn disabled" id="stop_btn">Остановить</a>
+            </div>
+            <table class="centered highlight" id="data-table">
+                <thead>
+                    <tr>
+                        <th>Частота (1/сек)</th>
+                        <th>Период (сек)</th>
+                        <th>Амплитуда (px)</th>
+                    </tr>
+                </thead>
+                <tbody>
+
+                </tbody>
+            </table>
+        </div>
+        <div class="plotarea">
+            <div class="xchart-data">
+                <canvas id="xChart" width="1000" height="400"></canvas>
+            </div>
+            <div class="ychart-data">
+                <canvas id="yChart" width="1000" height="400"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript" src="static/jquery.min.js"></script>
+    <script type="text/javascript" src="static/materialize.min.js"></script>
+
+    <script type="text/javascript">
+        let ctx = document.getElementById("xChart");
+        let xChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'X координата (px)',
+                    data: [],
+                    responsive: true,
+                    fill: false,
+                    showLine: false,
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255,99,132,1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                scales: {
+                    xAxes: [{
+                        ticks: {
+                            drawTicks: false,
+                        }
+                    }],
+                    yAxes: [{
+                        ticks: {
+                            beginAtZero: false
+                        }
+                    }]
+                }
+            }
+        });
+        let cty = document.getElementById("yChart");
+        let yChart = new Chart(cty, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Y координата (px)',
+                    data: [],
+                    responsive: true,
+                    fill: false,
+                    showLine: false,
+                    backgroundColor: 'rgba(255, 99, 132, 0.2)',
+                    borderColor: 'rgba(255,99,132,1)',
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                scales: {
+                    xAxes: [{
+                        ticks: {
+                            drawTicks: false,
+                        }
+                    }],
+                    yAxes: [{
+                        ticks: {
+                            beginAtZero: false
+                        }
+                    }]
+                }
+            }
+        });
+
+        function enter_length_val() {
+            let l = document.getElementById("p_length").value;
+            document.getElementById("period_theoretical").innerHTML = (6.283185307 * Math.sqrt(l / 981)).toFixed(2);
+            socket.emit('pen_length', l);
+        }
+
+        socket.on('data_emit', function(data) {
+            for (let i = 0; i < data.length; i += 1) {
+                xChart.data.datasets[0].data[i] = data[i][1];
+                xChart.data.labels[i] = (data[i][0]).toFixed(2);
+                yChart.data.datasets[0].data[i] = data[i][2];
+                yChart.data.labels[i] = (data[i][0]).toFixed(2);
+            };
+            xChart.update();
+            yChart.update();
+        });
+
+        document.getElementById("start_btn").addEventListener("click", function() {
+            socket.emit("start_exp");
+            document.getElementById("stop_btn").classList.remove("disabled");
+            document.getElementById("start_btn").classList.add("disabled");
+        });
+
+        document.getElementById("stop_btn").addEventListener("click", function() {
+            socket.emit("stop_exp");
+            document.getElementById("stop_btn").classList.add("disabled");
+            document.getElementById("start_btn").classList.remove("disabled");
+        });
+
+        socket.on('fit_data_x', function(data) {
+            let xfit_dataset = {
+                label: 'Аппроксимация',
+                data: data,
+                responsive: true,
+                fill: false,
+                showLine: true,
+                pointRadius: 0,
+                backgroundColor: 'rgba(16, 50, 218, 0.2)',
+                borderColor: 'rgba(16, 50, 218,1)',
+                borderWidth: 1
+            };
+            xChart.data.datasets.push(xfit_dataset);
+            xChart.update();
+        });
+        socket.on('fit_data_y', function(data) {
+            let yfit_dataset = {
+                label: 'Аппроксимация',
+                data: data,
+                responsive: true,
+                fill: false,
+                showLine: true,
+                pointRadius: 0,
+                backgroundColor: 'rgba(16, 50, 218, 0.2)',
+                borderColor: 'rgba(16, 50, 218,1)',
+                borderWidth: 1
+            };
+            yChart.data.datasets.push(yfit_dataset);
+            yChart.update();
+        });
+
+        socket.on('exp_values', function(data) {
+            let table = document.getElementById("data-table");
+
+            let row = "<tr><td>" + (6.283185307 / data[0]).toFixed(2) + "</td><td>" + data[0].toFixed(2) + "</td><td>" + data[1].toFixed(2) + "</td></tr>";
+            $(table).find('tbody').append(row);
+
+        });
+    </script>
+
+</body>
+
+</html>
